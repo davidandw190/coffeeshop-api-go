@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// DB represents the database connection.
 type DB struct {
 	DB *sql.DB
 }
@@ -18,12 +19,14 @@ const (
 	maxDbLifetime = 5 * time.Minute
 )
 
+// ConnectPostgres establishes a connection to a PostgreSQL database.
 func ConnectPostgres(dsn string) (*DB, error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}
 
+	// Database connection pool settings
 	db.SetMaxOpenConns(maxOpenDbConn)
 	db.SetMaxIdleConns(maxIdleDbConn)
 	db.SetConnMaxLifetime(maxDbLifetime)
@@ -37,6 +40,7 @@ func ConnectPostgres(dsn string) (*DB, error) {
 	return dbConn, nil
 }
 
+// testDB pings the database to ensure the connection is active.
 func testDB(db *sql.DB) error {
 	if err := db.Ping(); err != nil {
 		log.Println("DB: Error", err)
