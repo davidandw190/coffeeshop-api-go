@@ -16,7 +16,7 @@ DB_PORT = 5434
 GO_CMD = go
 GO_BUILD_CMD = $(GO_CMD) build
 GO_BUILD_FLAGS = -o $(BINARY)
-GO_SRC = cmd/server/*.go
+GO_SRC = cmd/server/main.go
 
 
 # Makefile targets
@@ -96,6 +96,10 @@ migrate_down:
 
 # Build the Go binary for your server
 build:
+	if [ -f "$(BINARY)" ]; then \
+		rm ${BINARY}; \
+		echo "Deleted Go binary $(BINARY)"; \
+	fi
 	@echo "Building the Go binary for your server..."
 	$(GO_BUILD_CMD) $(GO_BUILD_FLAGS) $(GO_SRC)
 
@@ -103,6 +107,7 @@ build:
 # Build and run the Go server
 run: build
 	@echo "Running the Go server..."
+	chmod +x ./$(BINARY)
 	./$(BINARY)
 
 
