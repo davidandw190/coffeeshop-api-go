@@ -1,0 +1,5 @@
+development:
+  driver: postgres
+  open: user=postgres dbname=coffeeshop-db sslmode=disable
+  folder: db/migrations 
+  format: sql 

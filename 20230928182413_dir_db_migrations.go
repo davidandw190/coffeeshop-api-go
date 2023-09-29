@@ -6,15 +6,15 @@ import (
 )
 
 func init() {
-	goose.AddMigration(upCoffeeshopDb, downCoffeeshopDb)
+	goose.AddMigration(upDirDbMigrations, downDirDbMigrations)
 }
 
-func upCoffeeshopDb(tx *sql.Tx) error {
+func upDirDbMigrations(tx *sql.Tx) error {
 	// This code is executed when the migration is applied.
 	return nil
 }
 
-func downCoffeeshopDb(tx *sql.Tx) error {
+func downDirDbMigrations(tx *sql.Tx) error {
 	// This code is executed when the migration is rolled back.
 	return nil
 }
