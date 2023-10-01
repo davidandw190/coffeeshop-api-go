@@ -45,12 +45,13 @@ func main() {
 		log.Fatal("error loading .env file")
 	}
 
+	// Load configuration settings
 	c := Config{
 		Port: os.Getenv("PORT"),
 	}
 
+	// Connect to the database
 	dsn := os.Getenv("DSN")
-
 	dbConn, err := db.ConnectPostgres(dsn)
 	if err != nil {
 		log.Fatalf("Server: Connot connect to the database")
@@ -58,11 +59,13 @@ func main() {
 
 	defer dbConn.DB.Close()
 
+	// Create the application instance
 	app := &Application{
 		Config: c,
 		// TODO: add the models
 	}
 
+	// Start the HTTP server
 	if err = app.Serve(); err != nil {
 		log.Fatal(err)
 	}
