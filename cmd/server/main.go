@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/davidandw190/coffeeshop-api-go/db"
 	"github.com/joho/godotenv"
 )
 
@@ -48,7 +49,14 @@ func main() {
 		Port: os.Getenv("PORT"),
 	}
 
-	// TODO: connenction to db
+	dsn := os.Getenv("DSN")
+
+	dbConn, err := db.ConnectPostgres(dsn)
+	if err != nil {
+		log.Fatalf("Server: Connot connect to the database")
+	}
+
+	defer dbConn.DB.Close()
 
 	app := &Application{
 		Config: c,
