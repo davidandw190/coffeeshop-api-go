@@ -13,3 +13,8 @@ type Models struct {
 	Coffee       Coffee
 	JsonResponse JsonResponse
 }
+
+func New(dbPool *sql.DB) Models {
+	db = dbPool
+	return Models{}
+}
