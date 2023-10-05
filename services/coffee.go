@@ -62,16 +62,20 @@ func GetAllCoffees(db *sql.DB, dbTimeout time.Duration) ([]*Coffee, error) {
 	return coffees, nil
 }
 
-func CreateCoffee(coffee Coffee) (*Coffee, error) {
+// CreateCoffee inserts a new coffee product into the database.
+func CreateCoffee(db *sql.DB, coffee Coffee, dbTimeout time.Duration) (*Coffee, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
 	query := `
 		INSERT INTO coffees(name, image, region, roast, price, grind_unit, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8) return *
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id
 	`
 
-	if res, err := db.ExecContext(
+	var id string
+
+	err := db.QueryRowContext(
 		ctx,
 		query,
 		coffee.Name,
@@ -82,9 +86,13 @@ func CreateCoffee(coffee Coffee) (*Coffee, error) {
 		coffee.GrindUnit,
 		time.Now(),
 		time.Now(),
-	); err != nil {
+	).Scan(&id)
+
+	if err != nil {
 		return nil, err
 	}
+
+	coffee.ID = id
 
 	return &coffee, nil
 }
