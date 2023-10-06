@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/davidandw190/coffeeshop-api-go/services"
 )
 
 type Envelope map[string]interface{}
@@ -58,4 +60,16 @@ func WriteJSON(w http.ResponseWriter, status int, data interface{}, headers ...h
 	}
 
 	return nil
+}
+
+func ErrorJSON(w http.ResponseWriter, err error, status ...int) {
+	statusCode := http.StatusBadRequest
+	if len(status) > 0 {
+		statusCode = status[0]
+	}
+
+	var payLoad services.JsonResponse
+	payLoad.Error = true
+	payLoad.Message = err.Error()
+	WriteJSON(w, statusCode, payLoad)
 }
