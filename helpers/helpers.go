@@ -1,0 +1,61 @@
+package helpers
+
+import (
+	"encoding/json"
+	"errors"
+	"log"
+	"net/http"
+	"os"
+)
+
+type Envelope map[string]interface{}
+
+type Message struct {
+	InfoLog  *log.Logger
+	ErrorLog *log.Logger
+}
+
+var infoLog = log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
+var errorLog = log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
+
+var MessageLogs = &Message{
+	InfoLog:  infoLog,
+	ErrorLog: errorLog,
+}
+
+func ReadJSON(w http.ResponseWriter, r *http.Request, data interface{}) error {
+	maxBytes := 1048576
+	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(data); err != nil {
+		return err
+	}
+
+	if err := dec.Decode(&struct{}{}); err != nil {
+		return errors.New("body must have a single json object only")
+	}
+
+	return nil
+}
+
+func WriteJSON(w http.ResponseWriter, status int, data interface{}, headers ...http.Header) error {
+	out, err := json.MarshalIndent(data, "", "\t")
+	if err != nil {
+		return err
+	}
+
+	if len(headers) > 0 {
+		for key, val := range headers[0] {
+			w.Header()[key] = val
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+
+	if _, err = w.Write(out); err != nil {
+		return err
+	}
+
+	return nil
+}
