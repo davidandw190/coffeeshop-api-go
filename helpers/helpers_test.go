@@ -160,4 +160,24 @@ func TestWriteJSON(t *testing.T) {
 		}
 	})
 
+	t.Run("Additional Headers", func(t *testing.T) {
+		data := struct {
+			Name string `json:"name"`
+		}{Name: "John"}
+
+		w := httptest.NewRecorder()
+
+		headers := make(http.Header)
+		headers.Add("Custom-Header", "CustomValue")
+
+		err := WriteJSON(w, http.StatusOK, data, headers)
+
+		if err != nil {
+			t.Errorf("WriteJSON() error = %v, want nil", err)
+		}
+
+		if w.Header().Get("Custom-Header") != "CustomValue" {
+			t.Errorf("WriteJSON() custom header not set correctly")
+		}
+	})
 }
