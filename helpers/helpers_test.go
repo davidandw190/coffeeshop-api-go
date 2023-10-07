@@ -2,8 +2,10 @@ package helpers
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 )
 
@@ -77,6 +79,33 @@ func TestReadJSON(t *testing.T) {
 
 		if err == nil {
 			t.Error("ReadJSON() expected an error, got nil")
+		} else if err.Error() != "http: request body too large" {
+			t.Errorf("ReadJSON() error message = %s, want 'http: request body too large'", err.Error())
+		}
+	})
+
+	t.Run("Empty Request Body", func(t *testing.T) {
+		data := struct {
+			Name string `json:"name"`
+		}{}
+
+		jsonData := `{}`
+
+		request, err := http.NewRequest(http.MethodPost, "/", bytes.NewBufferString(jsonData))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		w := httptest.NewRecorder()
+
+		err = ReadJSON(w, request, &data)
+
+		if err != nil {
+			t.Errorf("ReadJSON() error = %v, want nil", err)
+		}
+
+		if data.Name != "" {
+			t.Errorf("ReadJSON() data.Name = %s, want an empty string", data.Name)
 		}
 	})
 }
@@ -101,12 +130,21 @@ func TestWriteJSON(t *testing.T) {
 			t.Errorf("WriteJSON() status code = %d, want %d", w.Code, http.StatusOK)
 		}
 
-		expectedJSON := `{
+		// Parse the expected and actual JSON responses
+		var expectedJSON, actualJSON map[string]interface{}
+		if err := json.Unmarshal([]byte(`{
 			"name": "John"
-		}`
+		}`), &expectedJSON); err != nil {
+			t.Fatalf("Failed to unmarshal expected JSON: %v", err)
+		}
 
-		if w.Body.String() != expectedJSON {
-			t.Errorf("WriteJSON() response body = %s, want %s", w.Body.String(), expectedJSON)
+		if err := json.Unmarshal(w.Body.Bytes(), &actualJSON); err != nil {
+			t.Fatalf("Failed to unmarshal actual JSON: %v", err)
+		}
+
+		// Compare the parsed JSON content
+		if !reflect.DeepEqual(expectedJSON, actualJSON) {
+			t.Errorf("WriteJSON() response JSON = %+v, want %+v", actualJSON, expectedJSON)
 		}
 	})
 
@@ -121,4 +159,5 @@ func TestWriteJSON(t *testing.T) {
 			t.Error("WriteJSON() expected an error, got nil")
 		}
 	})
+
 }
