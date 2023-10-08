@@ -3,16 +3,20 @@ package helpers
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
+
+	"github.com/davidandw190/coffeeshop-api-go/services"
 )
 
 func TestReadJSON(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Valid JSON", func(t *testing.T) {
+		// Test when valid JSON is provided in the request body.
 		data := struct {
 			Name string `json:"name"`
 		}{}
@@ -39,6 +43,7 @@ func TestReadJSON(t *testing.T) {
 	})
 
 	t.Run("Invalid JSON", func(t *testing.T) {
+		// Test when invalid JSON with an extra comma is provided.
 		data := struct {
 			Name string `json:"name"`
 		}{}
@@ -60,6 +65,7 @@ func TestReadJSON(t *testing.T) {
 	})
 
 	t.Run("Request Body Too Large", func(t *testing.T) {
+		// Test when the request body size exceeds the maxBytes limit.
 		data := struct {
 			Name string `json:"name"`
 		}{}
@@ -85,6 +91,7 @@ func TestReadJSON(t *testing.T) {
 	})
 
 	t.Run("Empty Request Body", func(t *testing.T) {
+		// Test when an empty JSON object is provided in the request body.
 		data := struct {
 			Name string `json:"name"`
 		}{}
@@ -114,6 +121,7 @@ func TestWriteJSON(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Valid JSON", func(t *testing.T) {
+		// Test when valid JSON data is written to the response.
 		data := struct {
 			Name string `json:"name"`
 		}{Name: "John"}
@@ -149,6 +157,7 @@ func TestWriteJSON(t *testing.T) {
 	})
 
 	t.Run("Invalid JSON Encoding", func(t *testing.T) {
+		// Test when invalid data type is provided for JSON encoding.
 		invalidData := make(chan int) // Unsupported type for JSON encoding
 
 		w := httptest.NewRecorder()
@@ -161,6 +170,7 @@ func TestWriteJSON(t *testing.T) {
 	})
 
 	t.Run("Additional Headers", func(t *testing.T) {
+		// Test when additional headers are included in the response.
 		data := struct {
 			Name string `json:"name"`
 		}{Name: "John"}
@@ -180,4 +190,47 @@ func TestWriteJSON(t *testing.T) {
 			t.Errorf("WriteJSON() custom header not set correctly")
 		}
 	})
+}
+
+func TestErrorJSON(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Default Status Code", func(t *testing.T) {
+		// Test when the default status code (http.StatusBadRequest) is used.
+		w := httptest.NewRecorder()
+		err := errors.New("Test Error")
+
+		ErrorJSON(w, err)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("ErrorJSON() status code = %d, want %d", w.Code, http.StatusBadRequest)
+		}
+
+		var response services.JsonResponse
+		if err = json.NewDecoder(w.Body).Decode(&response); err != nil {
+			t.Errorf("ErrorJSON() could not decode response body: %v", err)
+		}
+
+		if !response.Error {
+			t.Errorf("ErrorJSON() response error field = %v, want true", response.Error)
+		}
+
+		if response.Message != "Test Error" {
+			t.Errorf("ErrorJSON() response message = %s, want 'Test Error'", response.Message)
+		}
+
+	})
+
+	t.Run("Custom Status Code", func(t *testing.T) {
+		// Test when a custom status code is specified.
+		w := httptest.NewRecorder()
+		err := errors.New("Custom Error")
+
+		ErrorJSON(w, err, http.StatusNotFound)
+
+		if w.Code != http.StatusNotFound {
+			t.Errorf("ErrorJSON() status code = %d, want %d", w.Code, http.StatusNotFound)
+		}
+	})
+
 }
