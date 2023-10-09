@@ -52,3 +52,41 @@ func TestConnectPostgres(t *testing.T) {
 		}
 	})
 }
+
+func TestDatabaseIntegration(t *testing.T) {
+	t.Parallel()
+
+	testDSN := os.Getenv("TEST_DSN")
+	db, err := ConnectPostgres(testDSN)
+	if err != nil {
+		t.Fatalf("ConnectPostgres() error = %v, want nil", err)
+	}
+
+	t.Run("Successful Ping", func(t *testing.T) {
+		// Test successful ping of the connected database.
+		err := testDB(db.DB)
+
+		if err != nil {
+			t.Errorf("testDB() error = %v, want nil", err)
+		}
+	})
+
+	t.Run("Max Open Connections", func(t *testing.T) {
+		// Test if the database enforces the maximum number of open connections.
+		// REMINDER: Adjust maxOpenDbConn to a smaller value for this test to fail.
+
+		maxConnections := db.DB.Stats().MaxOpenConnections
+		if maxConnections != maxOpenDbConn {
+			t.Errorf("MaxOpenConnections = %d, want %d", maxConnections, maxOpenDbConn)
+		}
+	})
+
+	t.Run("Max Idle Connections", func(t *testing.T) {
+		// Test if the database enforces the maximum number of idle connections.
+		// REMINDER: Adjust maxIdleDbConn to a smaller value for this test to fail.
+		idleConnections := db.DB.Stats().Idle
+		if idleConnections != maxIdleDbConn {
+			t.Errorf("Idle Connections = %d, want %d", idleConnections, maxIdleDbConn)
+		}
+	})
+}
