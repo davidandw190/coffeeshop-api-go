@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -87,6 +88,16 @@ func TestDatabaseIntegration(t *testing.T) {
 		idleConnections := db.DB.Stats().Idle
 		if idleConnections != maxIdleDbConn {
 			t.Errorf("Idle Connections = %d, want %d", idleConnections, maxIdleDbConn)
+		}
+	})
+
+	t.Run("Connection Lifetime", func(t *testing.T) {
+		// Test if the database enforces the maximum connection lifetime.
+		// REMINDER: Adjust maxDbLifetime to a smaller value for this test to fail.
+		lifetime := time.Duration(db.DB.Stats().MaxLifetimeClosed)
+		expectedLifetime := maxDbLifetime
+		if lifetime != expectedLifetime {
+			t.Errorf("Connection Lifetime = %v, want %v", lifetime, expectedLifetime)
 		}
 	})
 }
