@@ -1,32 +1,56 @@
 package services
 
 import (
+	"database/sql"
 	"testing"
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 )
 
-func TestGetAllCoffees(t *testing.T) {
+func setupTestDB(t *testing.T) (*sql.DB, sqlmock.Sqlmock) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("Failed to open a stub database connection: %v", err)
 	}
+	return db, mock
+}
 
-	defer db.Close()
+func TestGetAllCoffees(t *testing.T) {
+	t.Parallel()
 
-	t.Run("TestGetAllCoffees", func(t *testing.T) {
-		t.Parallel()
+	t.Run("Successful Retrieval", func(t *testing.T) {
+		// Test retrieving a list of coffee products successfully.
+		db, mock := setupTestDB(t)
+		defer db.Close()
 
-		// Define test data
+		expectedCoffee1 := &Coffee{
+			ID:        "1",
+			Name:      "TestCoffee1",
+			Image:     "image1.jpg",
+			Roast:     "Medium",
+			Region:    "Brazil",
+			Price:     5.99,
+			GrindUnit: 1,
+		}
+		expectedCoffee2 := &Coffee{
+			ID:        "2",
+			Name:      "TestCoffee2",
+			Image:     "image2.jpg",
+			Roast:     "Dark",
+			Region:    "Colombia",
+			Price:     7.99,
+			GrindUnit: 2,
+		}
+
+		// Define mock rows with expected data.
 		expectedRows := sqlmock.NewRows([]string{"id", "name", "image", "roast", "region", "price", "grind_unit", "created_at", "updated_at"}).
-			AddRow("1", "TestCoffee1", "image1.jpg", "Medium", "Brazil", 5.99, 1, time.Now(), time.Now()).
-			AddRow("2", "TestCoffee2", "image2.jpg", "Dark", "Colombia", 7.99, 2, time.Now(), time.Now())
+			AddRow(expectedCoffee1.ID, expectedCoffee1.Name, expectedCoffee1.Image, expectedCoffee1.Roast, expectedCoffee1.Region, expectedCoffee1.Price, expectedCoffee1.GrindUnit, time.Now(), time.Now()).
+			AddRow(expectedCoffee2.ID, expectedCoffee2.Name, expectedCoffee2.Image, expectedCoffee2.Roast, expectedCoffee2.Region, expectedCoffee2.Price, expectedCoffee2.GrindUnit, time.Now(), time.Now())
 
-		// Set up the SQL mock expectations for the SELECT query
 		mock.ExpectQuery("^SELECT").WillReturnRows(expectedRows)
 
-		// Call the function and get the result
+		// Call the function and check the results.
 		coffees, err := GetAllCoffees(db, 5*time.Second)
 		if err != nil {
 			t.Fatalf("GetAllCoffees error: %v", err)
@@ -34,6 +58,43 @@ func TestGetAllCoffees(t *testing.T) {
 
 		if len(coffees) != 2 {
 			t.Errorf("Expected 2 coffees, got %d", len(coffees))
+		}
+
+		// Check each coffee's attributes
+		if coffees[0].ID != expectedCoffee1.ID || coffees[0].Name != expectedCoffee1.Name {
+			t.Errorf("Mismatch in coffee data: expected %+v, got %+v", expectedCoffee1, coffees[0])
+		}
+		if coffees[1].ID != expectedCoffee2.ID || coffees[1].Name != expectedCoffee2.Name {
+			t.Errorf("Mismatch in coffee data: expected %+v, got %+v", expectedCoffee2, coffees[1])
+		}
+	})
+
+	t.Run("Empty Database", func(t *testing.T) {
+		// Test when the database is empty, and no coffee products are retrieved.
+		db, mock := setupTestDB(t)
+		defer db.Close()
+
+		mock.ExpectQuery("^SELECT").WillReturnRows(sqlmock.NewRows([]string{}))
+
+		coffees, err := GetAllCoffees(db, 5*time.Second)
+		if err != nil {
+			t.Fatalf("GetAllCoffees error: %v", err)
+		}
+
+		if len(coffees) != 0 {
+			t.Errorf("Expected 0 coffees, got %d", len(coffees))
+		}
+	})
+
+	t.Run("Database Error", func(t *testing.T) {
+		// Test when an error occurs while retrieving coffee products.
+		db, mock := setupTestDB(t)
+		defer db.Close()
+
+		mock.ExpectQuery("^SELECT").WillReturnError(sql.ErrNoRows)
+
+		if _, err := GetAllCoffees(db, 5*time.Second); err == nil {
+			t.Error("Expected an error, but got nil")
 		}
 	})
 
