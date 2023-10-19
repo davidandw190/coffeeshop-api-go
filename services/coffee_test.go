@@ -97,5 +97,60 @@ func TestGetAllCoffees(t *testing.T) {
 			t.Error("Expected an error, but got nil")
 		}
 	})
+}
+
+func TestCreateCoffee(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Successful Creation", func(t *testing.T) {
+		// Test creating a new coffee product successfully.
+
+		db, mock := setupTestDB(t)
+		defer db.Close()
+
+		inputCoffee := Coffee{
+			Name:      "TestCoffee",
+			Image:     "test.jpg",
+			Region:    "Kenya",
+			Roast:     "Light",
+			Price:     9.99,
+			GrindUnit: 1,
+		}
+
+		expectedCoffee := &Coffee{
+			ID:        "1",
+			Name:      inputCoffee.Name,
+			Image:     inputCoffee.Image,
+			Roast:     inputCoffee.Roast,
+			Region:    inputCoffee.Region,
+			Price:     inputCoffee.Price,
+			GrindUnit: inputCoffee.GrindUnit,
+		}
+
+		mock.ExpectQuery("^INSERT INTO coffees").WithArgs(inputCoffee.Name, inputCoffee.Image, inputCoffee.Region, inputCoffee.Roast, inputCoffee.Price, inputCoffee.GrindUnit, sqlmock.AnyArg(), sqlmock.AnyArg()).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(expectedCoffee.ID))
+
+		createdCoffee, err := CreateCoffee(db, inputCoffee, 5*time.Second)
+		if err != nil {
+			t.Fatalf("CreateCoffee error: %v", err)
+		}
+
+		if createdCoffee.ID != expectedCoffee.ID || createdCoffee.Name != expectedCoffee.Name {
+			t.Errorf("Mismatch in coffee data: expected %+v, got %+v", expectedCoffee, createdCoffee)
+		}
+	})
+
+	t.Run("Database Error", func(t *testing.T) {
+		// Test when an error occurs while creating a coffee product.
+		db, mock := setupTestDB(t)
+		defer db.Close()
+
+		mock.ExpectQuery("^INSERT INTO coffees").WillReturnError(sql.ErrNoRows)
+
+		if _, err := CreateCoffee(db, Coffee{}, 5*time.Second); err == nil {
+			t.Error("Expected an error, but got nil")
+		}
+
+	})
 
 }
