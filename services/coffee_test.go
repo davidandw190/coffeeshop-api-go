@@ -180,4 +180,28 @@ func TestCreateCoffee(t *testing.T) {
 
 	})
 
+	t.Run("Timeout Error", func(t *testing.T) {
+		// Test when a database query times out.
+		db, mock := setupTestDB(t)
+		defer db.Close()
+
+		mock.ExpectQuery("^INSERT INTO coffees").WillReturnError(context.DeadlineExceeded)
+
+		if _, err := CreateCoffee(db, Coffee{}, 1*time.Second); err == nil {
+			t.Error("Expected a timeout error, but got nil")
+		}
+	})
+
+	t.Run("Insert Error", func(t *testing.T) {
+		// Test when an error occurs during the insert operation.
+		db, mock := setupTestDB(t)
+		defer db.Close()
+
+		mock.ExpectQuery("^INSERT INTO coffees").WillReturnError(sql.ErrTxDone)
+
+		if _, err := CreateCoffee(db, Coffee{}, 5*time.Second); err == nil {
+			t.Error("Expected an insert error, but got nil")
+		}
+	})
+
 }
