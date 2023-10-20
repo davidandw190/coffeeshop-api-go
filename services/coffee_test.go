@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 	"time"
@@ -95,6 +96,32 @@ func TestGetAllCoffees(t *testing.T) {
 
 		if _, err := GetAllCoffees(db, 5*time.Second); err == nil {
 			t.Error("Expected an error, but got nil")
+		}
+	})
+
+	t.Run("Timeout Error", func(t *testing.T) {
+		// Test when a database query times out.
+		db, mock := setupTestDB(t)
+		defer db.Close()
+
+		mock.ExpectQuery("^SELECT").WillReturnError(context.DeadlineExceeded)
+
+		if _, err := GetAllCoffees(db, 1*time.Second); err == nil {
+			t.Error("Expected a timeout error, but got nil")
+		}
+	})
+
+	t.Run("Scan Error", func(t *testing.T) {
+		// Test when an error occurs while scanning results.
+		db, mock := setupTestDB(t)
+		defer db.Close()
+
+		expectedRows := sqlmock.NewRows([]string{"id", "name"}).AddRow(1, "TestCoffee1")
+
+		mock.ExpectQuery("^SELECT").WillReturnRows(expectedRows)
+
+		if _, err := GetAllCoffees(db, 5*time.Second); err == nil {
+			t.Error("Expected a scan error, but got nil")
 		}
 	})
 }
