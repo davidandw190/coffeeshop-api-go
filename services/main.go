@@ -11,6 +11,7 @@ const dbTimeout = time.Second * 3
 
 // Models contains instances of data models and services.
 type Models struct {
+	DB           *sql.DB
 	Coffee       Coffee
 	JsonResponse JsonResponse
 }
