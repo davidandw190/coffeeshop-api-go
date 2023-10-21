@@ -52,7 +52,6 @@ func TestGetAllCoffees(t *testing.T) {
 
 		mock.ExpectQuery("^SELECT").WillReturnRows(expectedRows)
 
-		// Create a Models instance with the database connection.
 		models := New(db)
 
 		// Call the function and check the results.
@@ -81,7 +80,6 @@ func TestGetAllCoffees(t *testing.T) {
 
 		mock.ExpectQuery("^SELECT").WillReturnRows(sqlmock.NewRows([]string{}))
 
-		// Create a Models instance with the database connection.
 		models := New(db)
 
 		coffees, err := models.Coffee.GetAllCoffees()
@@ -101,7 +99,6 @@ func TestGetAllCoffees(t *testing.T) {
 
 		mock.ExpectQuery("^SELECT").WillReturnError(sql.ErrNoRows)
 
-		// Create a Models instance with the database connection.
 		models := New(db)
 
 		if _, err := models.Coffee.GetAllCoffees(); err == nil {
@@ -116,7 +113,6 @@ func TestGetAllCoffees(t *testing.T) {
 
 		mock.ExpectQuery("^SELECT").WillReturnError(context.DeadlineExceeded)
 
-		// Create a Models instance with the database connection.
 		models := New(db)
 
 		if _, err := models.Coffee.GetAllCoffees(); err == nil {
@@ -133,7 +129,6 @@ func TestGetAllCoffees(t *testing.T) {
 
 		mock.ExpectQuery("^SELECT").WillReturnRows(expectedRows)
 
-		// Create a Models instance with the database connection.
 		models := New(db)
 
 		if _, err := models.Coffee.GetAllCoffees(); err == nil {
@@ -141,6 +136,46 @@ func TestGetAllCoffees(t *testing.T) {
 		}
 	})
 
+	t.Run("Partial Scan Error", func(t *testing.T) {
+		// Test when ascan error occurs for some columns but not all.
+		db, mock := setupTestDB(t)
+		defer db.Close()
+
+		expectedRows := sqlmock.NewRows([]string{"id", "name", "price"}).AddRow(1, "TestCoffee1", "invlid-price")
+
+		mock.ExpectQuery("^SELECT").WillReturnRows(expectedRows)
+
+		models := New(db)
+
+		if _, err := models.Coffee.GetAllCoffees(); err == nil {
+			t.Error("Expected a scan error, but got nil")
+		}
+	})
+
+	t.Run("Large Result Set", func(t *testing.T) {
+		// Test when retrieving a large result set of coffee products.
+		db, mock := setupTestDB(t)
+		defer db.Close()
+
+		// Create a large number of expected rows (more than the default row limit in sqlmock).
+		expectedRows := sqlmock.NewRows([]string{"id", "name", "image", "roast", "region", "price", "grind_unit", "created_at", "updated_at"})
+		for i := 1; i <= 1_000_000; i++ {
+			expectedRows.AddRow(i, "CoffeeName", "coffee.jpg", "Medium", "Origin", 5.99, 1, time.Now(), time.Now())
+		}
+
+		mock.ExpectQuery("^SELECT").WillReturnRows(expectedRows)
+
+		models := New(db)
+
+		coffees, err := models.Coffee.GetAllCoffees()
+		if err != nil {
+			t.Fatalf("GetAllCoffees error: %v", err)
+		}
+
+		if len(coffees) != 1_000_000 {
+			t.Errorf("Expected 1,000,000 coffees, got %d", len(coffees))
+		}
+	})
 }
 
 func TestCreateCoffee(t *testing.T) {
