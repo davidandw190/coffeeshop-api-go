@@ -209,7 +209,6 @@ func TestCreateCoffee(t *testing.T) {
 		mock.ExpectQuery("^INSERT INTO coffees").WithArgs(inputCoffee.Name, inputCoffee.Image, inputCoffee.Region, inputCoffee.Roast, inputCoffee.Price, inputCoffee.GrindUnit, sqlmock.AnyArg(), sqlmock.AnyArg()).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(expectedCoffee.ID))
 
-		// Create a Models instance with the database connection.
 		models := New(db)
 
 		createdCoffee, err := models.Coffee.CreateCoffee(inputCoffee)
@@ -229,9 +228,7 @@ func TestCreateCoffee(t *testing.T) {
 
 		mock.ExpectQuery("^INSERT INTO coffees").WillReturnError(sql.ErrNoRows)
 
-		// Create a Models instance with the database connection.
 		models := New(db)
-
 		if _, err := models.Coffee.CreateCoffee(Coffee{}); err == nil {
 			t.Error("Expected an error, but got nil")
 		}
@@ -267,4 +264,83 @@ func TestCreateCoffee(t *testing.T) {
 		}
 	})
 
+}
+
+func TestGetCoffeByID(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Successful Retrieval", func(t *testing.T) {
+		// Test retrieving a specific coffee product successfully.
+		db, mock := setupTestDB(t)
+		defer db.Close()
+
+		expectedCoffee := &Coffee{
+			ID:        "1",
+			Name:      "TestCoffee",
+			Image:     "test.jpg",
+			Roast:     "Light",
+			Region:    "Kenya",
+			Price:     9.99,
+			GrindUnit: 1,
+		}
+
+		expectedRows := sqlmock.NewRows([]string{"id", "name", "image", "roast", "region", "price", "grind_unit", "created_at", "updated_at"}).
+			AddRow(expectedCoffee.ID, expectedCoffee.Name, expectedCoffee.Image, expectedCoffee.Roast, expectedCoffee.Region, expectedCoffee.Price, expectedCoffee.GrindUnit, time.Now(), time.Now())
+
+		mock.ExpectQuery("^SELECT").WithArgs(expectedCoffee.ID).WillReturnRows(expectedRows)
+
+		models := New(db)
+
+		coffee, err := models.Coffee.GetCoffeeByID(expectedCoffee.ID)
+		if err != nil {
+			t.Fatalf("GetCoffeeByID error: %v", err)
+		}
+
+		if coffee.ID != expectedCoffee.ID || coffee.Name != expectedCoffee.Name || coffee.Price != expectedCoffee.Price {
+			t.Errorf("Mismatch in coffee data: expected %+v, got %+v", expectedCoffee, coffee)
+		}
+	})
+
+	t.Run("Coffee Not Found", func(t *testing.T) {
+		// Test when the requested coffee product is not found.
+		db, mock := setupTestDB(t)
+		defer db.Close()
+
+		notToBeFoundID := "10000"
+
+		mock.ExpectQuery("^SELECT").WithArgs(notToBeFoundID).WillReturnRows(sqlmock.NewRows([]string{}))
+
+		models := New(db)
+
+		coffee, err := models.Coffee.GetCoffeeByID(notToBeFoundID)
+		if err == nil {
+			t.Error("Expected an error, but got nil")
+		}
+
+		if coffee != nil {
+			t.Errorf("Expected a nil coffee, got %+v", coffee)
+		}
+
+	})
+
+	t.Run("Database Error", func(t *testing.T) {
+		// Test when an error occurs while retrieving a coffee product.
+		db, mock := setupTestDB(t)
+		defer db.Close()
+
+		expectedID := "1"
+
+		mock.ExpectQuery("^SELECT").WithArgs(expectedID).WillReturnError(sql.ErrNoRows)
+
+		models := New(db)
+
+		coffee, err := models.Coffee.GetCoffeeByID(expectedID)
+		if err == nil {
+			t.Error("Expected an error, but got nil")
+		}
+
+		if coffee != nil {
+			t.Errorf("Expected a nil coffee, got %+v", coffee)
+		}
+	})
 }
