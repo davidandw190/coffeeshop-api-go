@@ -95,6 +95,7 @@ func (c *Coffee) CreateCoffee(coffee Coffee) (*Coffee, error) {
 	return &coffee, nil
 }
 
+// GetCoffeeByID retrieves a coffee product by its ID from the database.
 func (c *Coffee) GetCoffeeByID(id string) (*Coffee, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
@@ -122,5 +123,20 @@ func (c *Coffee) GetCoffeeByID(id string) (*Coffee, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &coffee, nil
+}
+
+// DeleteCoffee removes a coffee product by its ID from the database.
+func (c *Coffee) DeleteCoffee(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	defer cancel()
+
+	query := `DELETE FROM coffees WHERE id = $1`
+	_, err := db.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
